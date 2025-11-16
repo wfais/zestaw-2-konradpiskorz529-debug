@@ -13,32 +13,20 @@ WORD_RE = re.compile(r"[^\W\d_]+", re.UNICODE)
 
 
 def selekcja(text: str):
-    # Zwróć listę słów wydobytych z 'text', spełniających warunki zadania:
-    #  - słowa zapisane małymi literami
-    #  - długość każdego słowa > 3 znaki
-    #
-    # Wskazówka:
-    #  użyj WORD_RE.findall(text), następnie przefiltruj wynik
-    #
-    # Przykład:
-    #  selekcja("Ala ma 3 koty i 2 psy oraz żółw")
-    #     -> ["koty", "oraz", "żółw"]
-    pass
+    # znajdź tylko słowa składające się z liter
+    slowa = WORD_RE.findall(text)
+    # zamień na małe litery i filtruj długość > 3
+    return [s.lower() for s in slowa if len(s) > 3]
 
 
 def ramka(text: str, width: int = 80) -> str:
-    # Zwróć napis w ramce o stałej szerokości, w postaci:
-    #   [        treść wyśrodkowana w polu o szerokości width-2       ]
-    #
-    # Jeśli text jest za długi (ma więcej znaków niż width-2),
-    # obetnij go do width-3 i dodaj na końcu znak '…' (U+2026).
-    #
-    # Następnie wyśrodkuj (użyj str.center(...)) i doklej nawiasy
-    # kwadratowe po bokach. Zwróć wynik w postaci f"[{...}]".
-    #
-    # Przykład:
-    #   ramka("Kot", width=10)  ->  "[  Kot   ]"   (łącznie 10 znaków)
-    pass
+    max_len = width - 2
+    if len(text) > max_len:
+        # przycinamy i dodajemy wielokropek
+        text = text[:max_len - 1] + "…"
+    # wyśrodkowanie i ramka
+    centered = text.center(max_len)
+    return f"[{centered}]"
 
 
 def main():
@@ -53,34 +41,29 @@ def main():
         try:
             data = requests.get(URL, headers=HEADERS, timeout=10).json()
         except Exception:
-            # timeout / brak JSON → spróbuj ponownie
             time.sleep(0.1)
             continue
 
-        # Pobierz tytuł hasła z 'data' (klucz "title"; jeśli brak, użyj pustego łańcucha)
-        # Następnie drukuj ramkę z tym tytułem:
-        #  - zbuduj łańcuch: "\r" + ramka(tytul, 80)
-        #  - wydrukuj print(..., end="", flush=True), by nadpisywać bieżącą linię w konsoli
-        #
-        # Przykład:
-        #   title = data.get("title") or ""
-        #   line = "\r" + ramka(title, 80)
-        #   print(line, end="", flush=True)
+        title = data.get("title") or ""
+        print("\r" + ramka(title, 80), end="", flush=True)
 
-        # Pobierz 'extract' (klucz "extract"; jeśli brak, użyj ""), przepuść przez selekcja()
-        #  - wynikowa lista słów (>=4) powinna zostać doliczona do licznika:
-        #       cnt.update(lista_slow)
-        #  - dolicz też do licznik_slow długość tej listy
-        #  - zwiększ licznik 'pobrane' (udało się przetworzyć jedną próbkę)
-        #  - opcjonalnie mała przerwa: time.sleep(0.05)
+        extract = data.get("extract", "")
+        lista_slow = selekcja(extract)
+        cnt.update(lista_slow)
+        licznik_slow += len(lista_slow)
+        pobrane += 1
 
+        time.sleep(0.05)  # opcjonalnie, żeby nie obciążać API
 
+    print("\n")
     print(f"Pobrano: {pobrane}")
     print(f"#Słowa:  {licznik_slow}")
     print(f"Unikalne:  {len(cnt)}\n")
 
     print("Najczęstsze 15 słów:")
-    # tu wypisz w pętli, korzystając np. z most_common(15)
+    for slowo, ile in cnt.most_common(15):
+        print(f"{slowo}: {ile}")
+
 
 if __name__ == "__main__":
     main()
